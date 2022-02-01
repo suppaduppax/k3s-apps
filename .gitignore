@@ -1,0 +1,6 @@
+files/*
+downloads/*
+venv/
+
+!files/.gitkeep
+!downloads/.gitkeep

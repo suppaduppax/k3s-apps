@@ -1,0 +1,19 @@
+- hosts: localhost
+  connection: local
+  vars:
+    system_tools_version: v0.1.1-rc7
+    system_tools_url: "https://github.com/rancher/system-tools/releases/download/{{ system_tools_version }}/system-tools_linux-amd64"
+
+  tasks:
+    - name: Install helm-diff plugin
+      kubernetes.core.helm_plugin:
+        plugin_path: https://github.com/databus23/helm-diff
+        state: present
+
+    - name: Install system-tools
+      become: yes
+      ansible.builtin.get_url:
+        url: "{{ system_tools_url }}"
+        dest: /usr/local/bin/system-tools
+        mode: 0755
+

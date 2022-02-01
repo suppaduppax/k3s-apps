@@ -1,0 +1,14 @@
+---
+k3s_version: v1.22.3+k3s1
+ansible_user: "{{ vault_ansible_user }}"
+ansible_password: "{{ vault_ansible_password }}"
+ansible_become_pass: "{{ vault_ansible_become_pass }}"
+
+kube_config_src: "k3s-server-01"
+kube_config_path: "{{ playbook_dir }}/files/{{ kube_config_src }}.kube.config"
+
+downloads_path: "{{ playbook_dir }}/downloads"
+
+rancher_namespace: "cattle-system"
+rancher_hostname: "rancher.k3s.home"
+rancher_bootstrap_password: "{{ vault_rancher_bootstrap_password }}"

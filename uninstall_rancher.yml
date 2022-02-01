@@ -1,0 +1,6 @@
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Uninstall rancher using system-tools
+      ansible.builtin.command:
+        cmd: "system-tools remove --kubeconfig {{ kube_config_path }} --namespace {{ rancher_namespace }} --force"
