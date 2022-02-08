@@ -79,6 +79,7 @@
             release_values: 
               hostname: "{{ rancher_hostname | mandatory }}"
               bootstrapPassword: "{{ rancher_bootstrap_password }}"
+            force: yes
           register: rancher_install_result
 
     - debug:
