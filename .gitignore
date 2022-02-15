@@ -4,3 +4,4 @@ venv/
 
 !files/.gitkeep
 !downloads/.gitkeep
+*test*

@@ -1,0 +1,24 @@
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Include harbor variables
+      include_vars:
+        dir: vars/harbor
+
+    - name: Install prereqs
+      include_tasks: tasks/install_prereqs.yml
+
+    - name: Add a repository
+      kubernetes.core.helm_repository:
+        name: harbor
+        repo_url: https://helm.goharbor.io
+
+    - name: Try installing rancher again if waiting for uninstall
+      kubernetes.core.helm:
+        kubeconfig: "{{ kube_config_path | mandatory }}"
+        name: harbor
+        release_namespace: "{{ harbor_namespace | default('harbor') }}"
+        create_namespace: yes
+        chart_ref: harbor/harbor
+        release_values: "{{ lookup('template', harbor_values_file) | from_yaml }}"
+        force: yes

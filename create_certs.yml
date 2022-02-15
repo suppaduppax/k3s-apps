@@ -1,0 +1,108 @@
+- hosts: localhost
+#  connection: local
+  vars:
+    cert_manager_cert_namespace: "cert-manager"
+    cert_manager_ca_secret: k3s.home-ca-secret
+    cert_manager_cert_secret: k3s.home-cert-secret
+    cert_manager_cert_dest: /mnt/thebank/k8s/webdav/k3s.home-ca.crt
+
+  tasks:
+    - name: Create certificates namespace
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ cert_manager_cert_namespace }}"
+
+    - name: Create self-signed cluster issuer
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: selfsigned-cluster-issuer
+            namespace: "{{ cert_manager_cert_namespace }}"
+          spec:
+            selfSigned: {}
+
+    - name: Create self-signed CA certificate
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: k3s.home-ca
+            namespace: "{{ cert_manager_cert_namespace }}"
+          spec:
+            commonName: k3s.home
+            subject:
+                organizations:
+                  - homelab
+            secretName: "{{ cert_manager_ca_secret }}"
+            secretTemplate:
+              annotations:
+                kubed.appscode.com/sync: ""
+            dnsNames:
+              - "*.k3s.home"
+            issuerRef:
+              name: selfsigned-cluster-issuer
+              kind: ClusterIssuer
+            usages:
+              - cert sign
+              - crl sign 
+              - server auth
+            isCA: true            
+
+    - name: Create tls cluster issuer
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: tls-issuer
+            namespace: "{{ cert_manager_cert_namespace }}"
+          spec:
+            ca:
+              secretName: "{{ cert_manager_ca_secret }}"
+
+      
+    - name: Create self-signed certificate
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: k3s.home-cert
+            namespace: "{{ cert_manager_cert_namespace }}"
+          spec:
+            commonName: k3s.home
+            subject:
+                organizations:
+                  - homelab
+            secretName: "{{ cert_manager_cert_secret }}"
+            secretTemplate:
+              annotations:
+                kubed.appscode.com/sync: ""
+            dnsNames:
+              - "*.k3s.home"
+            issuerRef:
+              name: tls-issuer
+              kind: ClusterIssuer
+            isCA: false        
+
+    - name: Output ca cert from secret using kubectl
+      command: >
+        kubectl get secret/"{{ cert_manager_ca_secret }}" 
+        -n {{ cert_manager_cert_namespace }} 
+        -o jsonpath="{.data['tls\.crt']}"
+      changed_when: false
+      register: ca_cert_result
+      
+    - name: Copy certs to Nas
+      become: yes
+      copy:
+        content: "{{ ca_cert_result.stdout | b64decode }}"
+        dest: "{{ cert_manager_cert_dest }}"
+      delegate_to: janet
+

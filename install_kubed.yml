@@ -1,0 +1,32 @@
+# Kubed (pronounced Cube-Dee) by AppsCode is a Kubernetes Cluster Operator Daemon. 
+# Kubed can do the following things for you:
+#   - Kubed can keep ConfigMaps and Secrets synchronized across Namespaces.
+#
+- hosts: localhost
+  connection: local
+  vars:
+    cert_manager_cert_namespace: "certificates"
+
+  tasks:
+    - include_vars:
+        dir: vars/kubed
+
+    - include_tasks: tasks/install_prereqs.yml
+
+    - name: Add jetsack helm repo
+      kubernetes.core.helm_repository:
+        name: appscode
+        repo_url: "https://charts.appscode.com/stable/"
+
+    - name: Helm install kubed
+      kubernetes.core.helm:
+        kubeconfig: "{{ kube_config_path | mandatory }}"
+        name: kubed
+        release_namespace: "{{ kubed_namespace }}"
+        chart_version: "{{ kubed_version }}"
+        chart_ref: appscode/kubed
+        create_namespace: yes
+        update_repo_cache: yes
+        release_values: 
+          enable-analytics: false
+
