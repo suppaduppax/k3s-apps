@@ -1,0 +1,3 @@
+longhorn_namespace: longhorn-system
+longhorn_hostname: longhorn.k3s.home
+longhorn_tls_secret: "{{ cert_tls_secret }}"

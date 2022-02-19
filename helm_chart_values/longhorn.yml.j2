@@ -1,0 +1,6 @@
+ingress:
+  enabled: true
+  ingressClassName: ~
+  host: "{{ longhorn_hostname }}"
+  tls: true
+  tlsSecret: "{{ longhorn_tls_secret }}"

@@ -5,3 +5,5 @@ venv/
 !files/.gitkeep
 !downloads/.gitkeep
 *test*
+
+*__pycache__*

@@ -1,5 +1,11 @@
 - hosts: localhost
-  connection: local
+  vars:
+    longhorn_hostname: longhorn.k3s.home
+    match_pvc_names:
+      - harbor-database
+      - harbor-redis
+      - harbor-trivy
+
   tasks:
     - name: Include harbor variables
       include_vars:
@@ -13,7 +19,73 @@
         name: harbor
         repo_url: https://helm.goharbor.io
 
-    - name: Try installing rancher again if waiting for uninstall
+    - name: Query longhorn backups
+      longhorn_list_backups:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        match_pvc_name: 'harbor'
+      register: backups_result
+      when: restore_volumes | default(true)
+
+    - name: Query longhorn volumes
+      longhorn_list_volumes:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+      register: volumes_result
+      when: restore_volumes | default(true)
+
+    - name: Restore harbor volumes from backups
+      longhorn_restore_backup:
+        backup: "{{ restore_backup.last_backup }}"
+        volume: "{{ restore_backup.volume }}"
+        replicas: 2
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+      register: restore_result
+      loop: "{{ match_pvc_names }}"
+      vars:
+        restore_backup: "{{ (backups_result.backups | default([]) | json_query(query) | first) }}"
+        query: "[?contains(pvc_name, '{{ item }}')]"
+        volume_query: "[?volume=='{{ restore_backup.volume }}']"
+      when:
+        - not volumes_result.volumes or not volumes_result.volumes | default([])  | json_query(volume_query)
+
+    - name: Wait for restored volumes to be ready (detached state)
+      longhorn_volume_wait:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        volume: "{{ item.json.id }}"
+        state: "detached"
+      register: wait_result
+      loop: "{{ restore_result.results }}"
+      when: restore_result is defined and (item.skipped is undefined or not item.skipped)
+
+    - name: Re-query longhorn volumes in case some were restored from backup
+      longhorn_list_volumes:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        match_pvc_name: 'harbor'
+      register: volumes_result
+      when: restore_volumes | default(true)
+
+    - name: Create PersistentVolumes and PersistentVolumeClaims
+      longhorn_create_pv:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        pv_name: "{{ volume.pv_name }}"
+        pvc_name: "{{ volume.pvc_name }}"
+        volume: "{{ volume.volume }}"
+        namespace: "{{ volume.namespace }}"
+      loop: "{{ match_pvc_names }}"
+      vars:
+        query: "[?contains(pvc_name, '{{ item }}')]"
+        volume_query: "{{ volumes_result.volumes | json_query(query) }}"
+        volume: "{{ volume_query | first }}"
+      when:
+        - volume_query
+        - volume.pv_status | lower != "available"
+
+    - name: Install harbor using helm
       kubernetes.core.helm:
         kubeconfig: "{{ kube_config_path | mandatory }}"
         name: harbor
@@ -22,3 +94,11 @@
         chart_ref: harbor/harbor
         release_values: "{{ lookup('template', harbor_values_file) | from_yaml }}"
         force: yes
+      vars:
+        database_query: "[?contains(pvc_name, 'harbor-database')]"
+        trivy_query: "[?contains(pvc_name, 'harbor-trivy')]"
+        redis_query: "[?contains(pvc_name, 'harbor-redis')]"
+        harbor_database_pvc: "{{ (volumes_result.volumes | default([]) | json_query(database_query) | first).pvc_name }}"
+        harbor_trivy_pvc: "{{ (volumes_result.volumes | default([]) | json_query(trivy_query) | first).pvc_name }}"
+        harbor_redis_pvc: "{{ (volumes_result.volumes | default([]) | json_query(redis_query) | first).pvc_name }}"
+                

@@ -1,0 +1,14 @@
+# For vmware sdk
+requests
+pyVmomi
+setuptools
+git+https://github.com/vmware/vsphere-automation-sdk-python.git
+
+#for ipaddr
+netaddr
+
+#json_query
+jmespath
+
+#k8s
+kubernetes

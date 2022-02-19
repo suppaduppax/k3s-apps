@@ -1,0 +1,20 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Get backups?
+      longhorn_list_volumes:
+        hostname: 'longhorn.k3s.home'
+        validate_certs: no
+        match: 'harbor'
+      register: volumes_result
+    - debug: var=volumes_result
+
+    - name: Get backups?
+      longhorn_list_backups:
+        hostname: 'longhorn.k3s.home'
+        validate_certs: no
+        match: 'harbor'
+      register: backup_volumes_result
+
+    - debug: var=backup_volumes_result
+

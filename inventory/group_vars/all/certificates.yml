@@ -1,0 +1,6 @@
+cert_namespace: "cert-manager"
+cert_ca_secret: k3s.home-ca-secret
+cert_tls_secret: k3s.home-tls-secret
+cert_ca_copy_dest: /mnt/thebank/k8s/webdav/k3s.home-ca.crt
+cert_duration: 19800h # 825d
+cert_renew_before: 16800h # 700d

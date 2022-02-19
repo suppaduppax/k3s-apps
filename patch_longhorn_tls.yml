@@ -1,0 +1,39 @@
+- hosts: localhost
+  vars:
+    longhorn_namespace: longhorn-system
+    longhorn_values_file: "{{ playbook_dir }}/helm_chart_values/longhorn.yml.j2"
+    longhorn_cur_values_file: /tmp/longhorn_cur_values.yml
+ 
+  tasks:
+    - name: Include longhorn variables
+      include_vars:
+        dir: vars/longhorn
+
+    - name: Install prereqs
+      include_tasks: tasks/install_prereqs.yml
+
+    - name: Get current values
+      command: >
+        helm get values longhorn 
+        --kubeconfig {{ kube_config_path }}
+        -n {{ longhorn_namespace }}
+      changed_when: false
+      register: longhorn_cur_values_result
+
+    - name: Export current values to file
+      copy:
+        content: "{{ longhorn_cur_values_result.stdout }}"
+        dest: "{{ longhorn_cur_values_file }}"
+
+    - name: Install Longhorn in the longhorn-system namespace
+      kubernetes.core.helm:
+        name: longhorn
+        kubeconfig: "{{ kube_config_path }}"
+        chart_ref: longhorn/longhorn
+        release_namespace: "{{ longhorn_namespace }}"
+        create_namespace: yes
+        update_repo_cache: no
+        validate_certs: no
+        values: "{{ longhorn_combined_values }}"
+      vars:
+        longhorn_combined_values: "{{ longhorn_cur_values_result.stdout | from_yaml | combine(lookup('template', longhorn_values_file) | from_yaml ) }}"

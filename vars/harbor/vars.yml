@@ -1,7 +1,8 @@
 ---
+harbor_namespace: awx-ee
 harbor_hostname: "harbor.k3s.home"
 harbor_external_url: "https://{{ harbor_hostname }}"
 harbor_password: "{{ vault_harbor_password }}"
 harbor_values_file: "helm_chart_values/harbor.yml.j2"
 harbor_tls_cert_source: secret
-harbor_tls_secret_name: k3s.home-cert-secret
+harbor_tls_secret_name: k3s.home-tls-secret

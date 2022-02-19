@@ -1,0 +1,37 @@
+- hosts: localhost
+  vars:
+    longhorn_hostname: longhorn.k3s.home
+
+  tasks:
+    - name: Ensure longhorn volumes
+      longhorn_list_volumes:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+#        match_workload: 'harbor'
+      register: volumes_result
+      when: restore_volumes | default(true)
+
+    - name: Ensure longhorn backups
+      longhorn_list_volumes:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        match: 'harbor'
+      register: backups_result
+      when: restore_volumes | default(true)
+  
+    - longhorn_restore_backups:
+        hostname: "{{ longhorn_hostname }}"
+        volume: restore_backup_volume
+        backup: restore_backup_id
+        wait: yes
+        validate_certs: no
+      loop: "{{ match_workloads }}"
+      vars:
+        match_workloads:
+          - harbor-trivy
+          - harbor-database
+          - harbor-redis
+        restore_backup_id: "{{ (backups | default({}) | dict2items | selectattr('key', 'match', item) | first).value }}"
+      when:
+        # find the backup matching the match item
+        - not volumes or volumes | dict2items | selectattr('key', 'match', item)

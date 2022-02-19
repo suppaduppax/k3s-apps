@@ -5,4 +5,4 @@ rancher_bootstrap_password: "{{ vault_rancher_bootstrap_password }}"
 
 system_tools_version: v0.1.1-rc7
 system_tools_url: "https://github.com/rancher/system-tools/releases/download/{{ system_tools_version }}/system-tools_linux-amd64"
-helm_diff_url: "https://github.com/databus23/helm-diff"
+#helm_diff_url: "https://github.com/databus23/helm-diff"

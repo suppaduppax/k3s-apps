@@ -1,4 +1,5 @@
 ---
 helm_version: helm-v3.7.2
 helm_url: "https://get.helm.sh/{{ helm_version }}-linux-amd64.tar.gz"
+helm_diff_url: "https://github.com/databus23/helm-diff"
 

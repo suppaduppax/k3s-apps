@@ -95,10 +95,10 @@
           kubectl -n cattle-system rollout status deploy/rancher
       when: not rancher_install_result.failed
 
-    - name: Install helm-diff plugin
-      kubernetes.core.helm_plugin:
-        plugin_path: "{{ helm_diff_url }}"
-        state: present
+#    - name: Install helm-diff plugin
+#      kubernetes.core.helm_plugin:
+#        plugin_path: "{{ helm_diff_url }}"
+#        state: present
 
     - name: Install system-tools
       become: yes
