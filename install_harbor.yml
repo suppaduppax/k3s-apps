@@ -19,46 +19,28 @@
         name: harbor
         repo_url: https://helm.goharbor.io
 
-    - name: Query longhorn backups
-      longhorn_list_backups:
-        hostname: "{{ longhorn_hostname }}"
-        validate_certs: no
-        match_pvc_name: 'harbor'
-      register: backups_result
-      when: restore_volumes | default(true)
-
-    - name: Query longhorn volumes
-      longhorn_list_volumes:
-        hostname: "{{ longhorn_hostname }}"
-        validate_certs: no
-      register: volumes_result
-      when: restore_volumes | default(true)
-
     - name: Restore harbor volumes from backups
       longhorn_restore_backup:
-        backup: "{{ restore_backup.last_backup }}"
-        volume: "{{ restore_backup.volume }}"
-        replicas: 2
+#        backup: "{{ restore_backup.last_backup }}"
+#        volume: "{{ restore_backup.volume }}"
         hostname: "{{ longhorn_hostname }}"
+        replicas: 2
+        match_pvc_names: "{{ match_pvc_names }}"
         validate_certs: no
       register: restore_result
-      loop: "{{ match_pvc_names }}"
-      vars:
-        restore_backup: "{{ (backups_result.backups | default([]) | json_query(query) | first) }}"
-        query: "[?contains(pvc_name, '{{ item }}')]"
-        volume_query: "[?volume=='{{ restore_backup.volume }}']"
-      when:
-        - not volumes_result.volumes or not volumes_result.volumes | default([])  | json_query(volume_query)
 
     - name: Wait for restored volumes to be ready (detached state)
       longhorn_volume_wait:
         hostname: "{{ longhorn_hostname }}"
         validate_certs: no
-        volume: "{{ item.json.id }}"
+        volume: "{{ item['volume'] }}"
         state: "detached"
       register: wait_result
-      loop: "{{ restore_result.results }}"
-      when: restore_result is defined and (item.skipped is undefined or not item.skipped)
+      loop: "{{ restore_result.restored_backups }}"
+      when: restore_result is defined
+
+    - debug:
+        var: restore_result
 
     - name: Re-query longhorn volumes in case some were restored from backup
       longhorn_list_volumes:
@@ -66,7 +48,10 @@
         validate_certs: no
         match_pvc_name: 'harbor'
       register: volumes_result
-      when: restore_volumes | default(true)
+      when:
+        - restore_result is defined
+        - restore_result.restored_backups | count > 0 
+        - restore_volumes | default(true)
 
     - name: Create PersistentVolumes and PersistentVolumeClaims
       longhorn_create_pv:
