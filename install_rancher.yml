@@ -7,23 +7,13 @@
       include_vars:
         dir: vars/rancher
 
+    - include_tasks: tasks/kubectl_prereqs.yml
+    - include_tasks: tasks/helm_prereqs.yml
+
     - name: Add a repository
       kubernetes.core.helm_repository:
         name: rancher-stable
         repo_url: https://releases.rancher.com/server-charts/stable
-
-    - name: Fetch kube config from master
-      delegate_to: k3s-server-01
-      ansible.builtin.fetch:
-        src: ~/.kube/config
-        dest: "{{ kube_config_path | mandatory }}"  
-        flat: yes
-        mode: "0600"
-
-    - name: Ensure secure mode on kube config
-      ansible.builtin.file:
-        path: "{{ kube_config_path | mandatory }}"
-        mode: "0600"
 
     - name: Download CustomResourceDefinition for cert-manager
       ansible.builtin.get_url:

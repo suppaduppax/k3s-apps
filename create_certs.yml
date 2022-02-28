@@ -1,5 +1,7 @@
 - hosts: localhost
   tasks:
+    - include_tasks: tasks/kubectl_prereqs.yml
+
     - name: Create certificates namespace
       kubernetes.core.k8s:
         definition:

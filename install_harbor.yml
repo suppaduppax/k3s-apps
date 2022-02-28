@@ -11,8 +11,8 @@
       include_vars:
         dir: vars/harbor
 
-    - name: Install prereqs
-      include_tasks: tasks/install_prereqs.yml
+    - include_tasks: tasks/kubctl_prereqs.yml
+    - include_tasks: tasks/helm_prereqs.yml
 
     - name: Add a repository
       kubernetes.core.helm_repository:

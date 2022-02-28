@@ -45,3 +45,45 @@
         template: "{{ awx_backup_template }}"
       vars:
         awx_backup_name: "awx-backup"    
+- hosts: localhost
+  vars:
+    awx_resource: "awx"
+
+  gather_facts: no
+  tasks:
+    - name: Include awx variables
+      include_vars:
+        dir: vars/awx
+
+    - name: Get postgres password from secret
+      command:
+        cmd: >
+          kubectl get secret {{ awx_resource }}-postgres-configuration
+          -o jsonpath="{.data.password}" 
+          -n {{ awx_namespace }} 
+      register: awx_postgres_password
+
+    - name: Use openssl to encrypt the password
+      shell:
+        cmd: >
+          echo "{{ awx_postgres_password.stdout | b64decode }}" | 
+          openssl enc -aes-256-cbc -md sha512 -a -pbkdf2 -iter 100000
+          -salt -pass pass:{{ awx_postgres_password_openssl }}
+      register: awx_encrypted_postgres_password
+
+    - name: Find awx postgres volume
+      longhorn_list_volumes:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        match_pvc_names: awx-postgres
+      register: volumes_result
+
+    - name: Wait for restored volumes to be ready (detached state)
+      longhorn_create_backup:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        volume: "{{ (volumes_result.volumes | first).volume }}"
+        labels:
+          postgres_password: "{{ awx_encrypted_postgres_password.stdout }}"
+      register: backup_result
+

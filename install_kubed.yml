@@ -11,10 +11,12 @@
     - include_vars:
         dir: vars/kubed
 
-    - include_tasks: tasks/install_prereqs.yml
+    - include_tasks: tasks/kubectl_prereqs.yml
+    - include_tasks: tasks/helm_prereqs.yml
 
     - name: Add jetsack helm repo
       kubernetes.core.helm_repository:
+        kubeconfig: "{{ kube_config_path }}"
         name: appscode
         repo_url: "https://charts.appscode.com/stable/"
 

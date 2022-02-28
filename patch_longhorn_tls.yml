@@ -10,7 +10,7 @@
         dir: vars/longhorn
 
     - name: Install prereqs
-      include_tasks: tasks/install_prereqs.yml
+      include_tasks: tasks/helm_prereqs.yml
 
     - name: Get current values
       command: >

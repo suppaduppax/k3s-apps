@@ -1,0 +1,20 @@
+---
+- include_vars:
+    dir: "{{ playbook_dir }}/vars/helm"
+
+- name: Download and unarchive helm binary
+  become: yes
+  ansible.builtin.unarchive:
+    src: "{{ helm_url }}"
+    dest: /tmp
+    remote_src: yes
+    include: linux-amd64/helm
+  register: helm
+
+- name: Copy helm binary to /usr/local/bin
+  become: yes
+  copy:
+    src: /tmp/linux-amd64/helm
+    dest: /usr/local/bin
+    mode: 0755
+

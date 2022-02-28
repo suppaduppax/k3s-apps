@@ -5,6 +5,8 @@
       include_vars:
         dir: vars/awx
 
+    - include_tasks: tasks/helm_preqreqs.yml
+
     - name: Create awx namespace
       kubernetes.core.k8s:
         definition:

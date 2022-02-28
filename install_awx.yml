@@ -7,8 +7,8 @@
       include_vars:
         dir: vars/awx
 
-    - name: Install prereqs
-      include_tasks: tasks/install_prereqs.yml
+    - name: Install kubectl prereqs
+      include_tasks: tasks/kubectl_prereqs.yml
 
     - name: Create awx namespace
       kubernetes.core.k8s:
