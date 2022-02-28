@@ -19,7 +19,21 @@ class ActionModule(ActionBase):
             pvc_name = kubestatus['pvcName']
             state = d['state']
 
-            if not match or re.search(match, pvc_name):
+            add_flag = False
+
+            if not match:
+                add_flag = True
+
+            else:
+                for m in match:
+                     if not re.search(m, pvc_name):
+                        continue
+
+                     add_flag = True
+                     break
+
+
+            if add_flag:
                 volumes.append({
                   'volume': d['id'],
                   'pv_name': kubestatus['pvName'],
@@ -35,7 +49,7 @@ class ActionModule(ActionBase):
     def run(self, tmp=None, task_vars=None):
         super(ActionModule, self).run(tmp, task_vars)
 
-        extra_args = ['hostname', 'match_pvc_name']
+        extra_args = ['hostname', 'match_pvc_names']
         module_args = self._task.args.copy()
         module_args['return_content'] = True
         module_args['url'] = "https://" + self._task.args.get('hostname', None) + "/v1/volumes"
@@ -52,7 +66,9 @@ class ActionModule(ActionBase):
 
 #        return dict(blah=module_return['json']['data'][0])
 
-        match_pvc_name = self._task.args.get('match_pvc_name', None)
+        match_pvc_names = self._task.args.get('match_pvc_names', None)
+        if match_pvc_names and type(match_pvc_names) is not list:
+            match_pvc_names = [match_pvc_names]
 
         ret = dict()
         volumes = []
@@ -63,7 +79,7 @@ class ActionModule(ActionBase):
             return module_return
 
         volumes, ids = self.match_volumes(
-          match_pvc_name,
+          match_pvc_names,
           module_return['json']['data']
         )
 
@@ -71,7 +87,7 @@ class ActionModule(ActionBase):
           volumes=volumes,
           #volumes_map=volumes_map,
           ids=ids,
-          match_pvc_name=match_pvc_name,
+          match_pvc_names=match_pvc_names,
           #workloads=workloads,
           url=module_args['url']
         )

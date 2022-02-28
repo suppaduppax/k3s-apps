@@ -1,0 +1,11 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - longhorn_list_volumes:
+        hostname: longhorn.k3s.home
+        validate_certs: no
+      register: volumes_result
+
+    - debug:
+        var: volumes_result
+

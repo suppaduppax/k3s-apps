@@ -1,0 +1,47 @@
+- hosts: localhost
+  tasks:
+    - name: Include awx variables
+      include_vars:
+        dir: vars/awx
+
+    - name: Install prereqs
+      include_tasks: tasks/install_prereqs.yml
+
+    - name: Create PersistentVolumes and PersistentVolumeClaims
+      longhorn_create_pv_pvc:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        match_pvc_names: "{{ match_pvc_names }}"
+      register: create_pv_pvc_result
+
+    - name: Clone awx-operator
+      ansible.builtin.git:
+        repo: "https://github.com/ansible/awx-operator"
+        dest: "{{ awx_operator_path }}"
+        version: "{{ awx_operator_version }}"
+        force: yes
+
+    - name: Make deploy awx-operator
+      environment:
+        NAMESPACE: "{{ awx_namespace }}"
+      ansible.builtin.command:
+        chdir: "{{ awx_operator_path }}"
+        cmd: "make deploy"
+
+    - name: Wait for operator to he available
+      command:
+        cmd: | 
+          kubectl wait
+          --kubeconfig {{ kube_config_path }} 
+          --for=condition=available 
+          --namespace {{ awx_namespace }}
+          --timeout 200s
+          deploy/awx-operator-controller-manager
+
+    - name: Deploy awx
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kube_config_path }}"
+        namespace: "{{ awx_namespace }}"
+        template: "{{ awx_backup_template }}"
+      vars:
+        awx_backup_name: "awx-backup"    

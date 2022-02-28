@@ -5,6 +5,9 @@
     helm_url: "https://get.helm.sh/{{ helm_version }}-linux-amd64.tar.gz"
 
   tasks:
+    - include_vars:
+        dir: vars/helm
+
     - name: Unarchive a file that needs to be downloaded (added in 2.0)
       become: yes
       ansible.builtin.unarchive:

@@ -138,7 +138,8 @@ class ActionModule(ActionBase):
 
                 restored_backups.append({
                     'volume': backup_vol,
-                    'backup': last_backup
+                    'backup': last_backup,
+                    'labels': backup['labels']
                 })
 
                 restore = self.restore_backup(
@@ -221,6 +222,7 @@ class ActionModule(ActionBase):
         for d in data:
             # find labels.KubernetesStatus
             kubestatus = d['labels']['KubernetesStatus']
+            labels = d['labels']
             kubejson = json.loads(kubestatus)
             pvc_name = kubejson['pvcName']
 
@@ -238,7 +240,8 @@ class ActionModule(ActionBase):
                 backups.append({
                   'volume': d['id'],
                   'last_backup': d['lastBackupName'],
-                  'pvc_name': pvc_name
+                  'pvc_name': pvc_name,
+                  'labels': labels
                 })
 
         return backups

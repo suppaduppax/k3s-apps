@@ -1,0 +1,113 @@
+- hosts: localhost
+  vars:
+    awx_postgres_configuration_path: templates/awx_postgres_configuration.yml.j2
+
+  tasks:
+    - name: Include awx variables
+      include_vars:
+        dir: vars/awx
+
+    - name: Install prereqs
+      include_tasks: tasks/install_prereqs.yml
+
+    - name: Create awx namespace
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ awx_namespace }}"
+
+    - name: Restore awx volumes from backups
+      longhorn_restore_backup:
+        hostname: "{{ longhorn_hostname }}"
+        replicas: 2
+        match_pvc_names: "{{ match_pvc_names }}"
+        validate_certs: no
+      register: restore_result
+
+    - name: Wait for restored volumes to be ready (detached state)
+      longhorn_volume_wait:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        volume: "{{ item['volume'] }}"
+        state: "detached"
+      register: wait_result
+      loop: "{{ restore_result.restored_backups }}"
+      when: 
+        - restore_result.restored_backups is defined
+        - restore_result.restored_backups | count > 0
+
+    - name: Decrypt postgres password
+      shell:
+        cmd: >
+          echo "{{ restore_result.restored_backups[0].labels.postgres_password }}" |
+          openssl enc -aes-256-cbc -md sha512 -a -d -pbkdf2 -iter 100000
+          -salt -pass pass:{{ awx_postgres_password_openssl }}
+      register: decrypted_awx_postgres_password
+      when: 
+        - restore_result.restored_backups is defined
+        - restore_result.restored_backups | count > 0
+
+    - name: Create postgres secret using backup label
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kube_config_path }}"
+        template: "{{ awx_postgres_configuration_path }}"
+      vars:
+        awx_postgres_password: "{{ decrypted_awx_postgres_password.stdout | b64encode }}"
+      when: 
+        - restore_result.restored_backups is defined
+        - restore_result.restored_backups | count > 0
+
+    - name: Re-query longhorn volumes if any were restored from backup
+      longhorn_list_volumes:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        match_pvc_names: "{{ match_pvc_names }}"
+      register: volumes_result
+
+    - name: Create PersistentVolumes and PersistentVolumeClaims
+      longhorn_create_pv_pvc:
+        hostname: "{{ longhorn_hostname }}"
+        validate_certs: no
+        match_pvc_names: "{{ match_pvc_names }}"
+      register: create_pv_pvc_result
+
+    - name: Clone awx-operator
+      ansible.builtin.git:
+        repo: "https://github.com/ansible/awx-operator"
+        dest: "{{ awx_operator_path }}"
+        version: "{{ awx_operator_version }}"
+        force: yes
+
+    - name: Make deploy awx-operator
+      environment:
+        NAMESPACE: "{{ awx_namespace }}"
+      ansible.builtin.command:
+        chdir: "{{ awx_operator_path }}"
+        cmd: "make deploy"
+
+    - name: Wait for operator to he available
+      command:
+        cmd: | 
+          kubectl wait
+          --kubeconfig {{ kube_config_path }} 
+          --for=condition=available 
+          --namespace {{ awx_namespace }}
+          --timeout 200s
+          deploy/awx-operator-controller-manager
+
+    - name: Deploy awx
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kube_config_path }}"
+        namespace: "{{ awx_namespace }}"
+        template: "{{ awx_deploy_template }}"
+    
+    - debug:
+        msg: |
+          AWX is now being deployed. It will take several minutes to complete.
+          To track progress view the logs using:
+          kubectl logs -f deployments/awx-operator-controller-manager -c awx-manager -n {{ awx_namespace }}
+
+          Once complete the webui is available at:
+          https://{{ awx_hostname }}

@@ -19,7 +19,19 @@ class ActionModule(ActionBase):
             kubejson = json.loads(kubestatus)
             pvc_name = kubejson['pvcName']
 
-            if not match or re.search(match, pvc_name):
+            add_flag = False
+            if not match:
+                add_flag = True
+
+            else:
+                for m in match:
+                    if not re.search(match, pvc_name):
+                        continue
+
+                    add_flag = True
+                    break
+
+            if add_flag:
                 backups.append({
                   'volume': d['id'],
                   'last_backup': d['lastBackupName'],
@@ -31,7 +43,7 @@ class ActionModule(ActionBase):
     def run(self, tmp=None, task_vars=None):
         super(ActionModule, self).run(tmp, task_vars)
 
-        extra_args = ['hostname', 'match_pvc_name']
+        extra_args = ['hostname', 'match_pvc_names']
         module_args = self._task.args.copy()
         module_args['return_content'] = True
         module_args['url'] = "https://" + self._task.args.get('hostname', None) + "/v1/backupvolumes"
@@ -46,7 +58,9 @@ class ActionModule(ActionBase):
 
         del tmp
 
-        match_pvc_name = self._task.args.get('match_pvc_name', None)
+        match_pvc_names = self._task.args.get('match_pvc_names', None)
+        if match_pvc_names and type(match_pvc_names) is not list:
+            match_pvc_names = [match_pvc_names]
 
         backups = []
 
@@ -54,12 +68,12 @@ class ActionModule(ActionBase):
             return module_return
 
         backups = self.match_backups(
-          match_pvc_name,
+          match_pvc_names,
           module_return['json']['data']
         )
 
         return dict(
           backups=backups,
-          match_pvc_name=match_pvc_name,
+          match_pvc_names=match_pvc_names,
           url=module_args['url']
         )

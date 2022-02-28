@@ -1,0 +1,12 @@
+awx_namespace: awx
+awx_deployment: awx
+awx_hostname: awx.k3s.home
+awx_deploy_template: "templates/awx_deploy.yml.j2"
+awx_backup_template: "templates/awx_backup.yml.j2"
+awx_operator_path: "/tmp/awx-operator-{{ awx_operator_version }}"
+awx_operator_version: "0.16.1"
+awx_tls_secret: "{{ cert_tls_secret }}"
+awx_postgres_password_openssl: "{{ vault_awx_postgres_password_openssl }}"
+longhorn_hostname: longhorn.k3s.home
+match_pvc_names:
+  - awx-postgres

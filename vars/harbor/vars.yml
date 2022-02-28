@@ -1,6 +1,7 @@
 ---
 harbor_namespace: awx-ee
 harbor_hostname: "harbor.k3s.home"
+harbor_notary_hostname: "notary.k3s.home"
 harbor_external_url: "https://{{ harbor_hostname }}"
 harbor_password: "{{ vault_harbor_password }}"
 harbor_values_file: "helm_chart_values/harbor.yml.j2"

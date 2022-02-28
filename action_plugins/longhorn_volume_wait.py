@@ -37,7 +37,12 @@ class ActionModule(ActionBase):
             if module_return.get('failed'):
                 return module_return
 
-            if module_return['json']['data'][0]['state'] == state:
+            check_volume = self.find_volume(self._task.args.get('volume'), module_return['json']['data'])
+
+            if not check_volume:
+                return dict(failed=True, msg="Could not find volume: " + volume)
+
+            if check_volume['state'] == state:
                 break
 
             time.sleep(delay)
@@ -48,12 +53,11 @@ class ActionModule(ActionBase):
 
         del tmp
 
-        match = self._task.args.get('match', None)
-
-        ret = dict()
-        volumes = []
-        ids = []
-        workloads = []
-        volumes_map = {}
-
         return module_return
+
+    def find_volume(self, volume, data):
+        for d in data:
+            if d['id'] == volume:
+                return d
+
+        return None

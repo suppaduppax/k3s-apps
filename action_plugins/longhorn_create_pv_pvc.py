@@ -52,7 +52,7 @@ class ActionModule(ActionBase):
         pvcs = []
 
         for v in volumes['volumes']:
-            if v['pv_status'].lower() == "bound":
+            if v['pv_status'].lower() == "bound" or v['pv_status'].lower() == "released":
                 continue
 
             pv_return = self.create_pv(

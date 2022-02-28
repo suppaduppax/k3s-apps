@@ -36,7 +36,7 @@ expose:
   ingress:
     hosts:
       core: "{{ harbor_hostname }}"
-      notary: notary.harbor.domain
+      notary: "{{ harbor_notary_hostname }}"
     # set to the type of ingress controller if it has specific requirements.
     # leave as `default` for most ingress controllers.
     # set to `gce` if using the GCE ingress controller

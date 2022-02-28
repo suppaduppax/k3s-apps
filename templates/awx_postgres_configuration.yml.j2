@@ -1,0 +1,18 @@
+apiVersion: v1
+data:
+  database: {{ 'awx' | b64encode }}
+  host: {{ 'awx-postgres' | b64encode }}
+  password: {{ awx_postgres_password }}
+  port: {{ '5432' | b64encode }}
+  type: {{ 'managed' | b64encode }}
+  username: {{ 'awx' | b64encode }}
+kind: Secret
+metadata:
+  name: awx-postgres-configuration
+  namespace: {{ awx_namespace}}
+  labels:
+    app.kubernetes.io/component: awx
+#    app.kubernetes.io/managed-by: awx-operator
+    app.kubernetes.io/name: awx
+#l    app.kubernetes.io/operator-version: ""
+    app.kubernetes.io/part-of: awx

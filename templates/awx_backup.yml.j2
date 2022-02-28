@@ -1,0 +1,9 @@
+---
+apiVersion: awx.ansible.com/v1beta1
+kind: AWXBackup
+metadata:
+  name: {{ awx_backup_name }}
+  namespace: {{ awx_namespace }}
+spec:
+  deployment_name: {{ awx_deployment }}
+  
